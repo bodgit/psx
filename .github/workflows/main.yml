@@ -9,8 +9,9 @@ jobs:
         go:
           - '1.14'
           - '1.15'
+          - '1.16'
         include:
-          - go: '1.15'
+          - go: '1.16'
             upload: true
     steps:
       - name: Checkout
