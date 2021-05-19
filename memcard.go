@@ -6,6 +6,8 @@ import (
 	"errors"
 )
 
+// Based on https://www.psdevwiki.com/ps3/PS1_Savedata
+
 const (
 	// BlockFirstLink signifies the first block in either a single or multi-block save
 	BlockFirstLink = iota + 0x51
