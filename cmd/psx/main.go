@@ -12,6 +12,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const maxChannels = 8
+
 var (
 	version = "dev"
 	commit  = "none"
@@ -24,6 +26,52 @@ func init() {
 		Aliases: []string{"V"},
 		Usage:   "print the version",
 	}
+}
+
+func saveMemoryCard(base, code string, mc *psx.MemoryCard) error {
+	directory := filepath.Join(base, code)
+dir:
+	fi, err := os.Stat(directory)
+	if err != nil {
+		if os.IsNotExist(err) {
+			if err := os.Mkdir(directory, os.ModePerm|os.ModeDir); err != nil {
+				return err
+			}
+			goto dir
+		}
+		return err
+	}
+	if !fi.IsDir() {
+		return errors.New("not a directory")
+	}
+
+	var i int
+	var target string
+	for i = 1; i <= maxChannels; i++ {
+		target = filepath.Join(directory, fmt.Sprintf("%s-%d.mcd", code, i))
+		fi, err = os.Stat(target)
+		if err != nil {
+			if os.IsNotExist(err) {
+				break
+			}
+			return err
+		}
+	}
+
+	if i > maxChannels {
+		return errors.New("no free memory card channels")
+	}
+
+	b, err := mc.MarshalBinary()
+	if err != nil {
+		return err
+	}
+
+	if err := ioutil.WriteFile(target, b, 0666); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func splitMemoryCard(base string, smc *psx.MemoryCard) error {
@@ -69,44 +117,7 @@ func splitMemoryCard(base string, smc *psx.MemoryCard) error {
 			}
 		}
 
-		directory := filepath.Join(base, code)
-	dir:
-		fi, err := os.Stat(directory)
-		if err != nil {
-			if os.IsNotExist(err) {
-				if err := os.Mkdir(directory, os.ModePerm|os.ModeDir); err != nil {
-					return err
-				}
-				goto dir
-			}
-			return err
-		}
-		if !fi.IsDir() {
-			return errors.New("not a directory")
-		}
-
-		var target string
-		for i = 1; i <= 8; i++ {
-			target = filepath.Join(directory, fmt.Sprintf("%s-%d.mcd", code, i))
-			fi, err = os.Stat(target)
-			if err != nil {
-				if os.IsNotExist(err) {
-					break
-				}
-				return err
-			}
-		}
-
-		if i > 8 {
-			return errors.New("no free memory card channels")
-		}
-
-		b, err := tmc.MarshalBinary()
-		if err != nil {
-			return err
-		}
-
-		if err := ioutil.WriteFile(target, b, 0666); err != nil {
+		if err := saveMemoryCard(base, code, tmc); err != nil {
 			return err
 		}
 	}
