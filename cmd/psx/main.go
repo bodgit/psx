@@ -41,31 +41,31 @@ func splitMemoryCard(base string, smc *psx.MemoryCard) error {
 		if err != nil {
 			return err
 		}
-		j := 0
+		i := 0
 
-		for i := 0; i < psx.NumBlocks; i++ {
-			df := smc.HeaderBlock.DirectoryFrame[i]
+		for j := 0; j < psx.NumBlocks; j++ {
+			df := smc.HeaderBlock.DirectoryFrame[j]
 			if df.AvailableBlocks != psx.BlockFirstLink || string(df.ProductCode[:]) != code {
 				continue
 			}
 			for {
 				// Copy the directory frame and data block
-				tmc.HeaderBlock.DirectoryFrame[j] = df
-				if df.LinkOrder != psx.LastLink && tmc.HeaderBlock.DirectoryFrame[j].LinkOrder != uint16(j+1) {
+				tmc.HeaderBlock.DirectoryFrame[i] = df
+				if df.LinkOrder != psx.LastLink && tmc.HeaderBlock.DirectoryFrame[i].LinkOrder != uint16(i+1) {
 					// Block has moved during the copy
-					tmc.HeaderBlock.DirectoryFrame[j].LinkOrder = uint16(j + 1)
-					tmc.HeaderBlock.DirectoryFrame[j].UpdateChecksum()
+					tmc.HeaderBlock.DirectoryFrame[i].LinkOrder = uint16(i + 1)
+					tmc.HeaderBlock.DirectoryFrame[i].UpdateChecksum()
 				}
-				tmc.DataBlock[j] = smc.DataBlock[i]
+				tmc.DataBlock[i] = smc.DataBlock[j]
 
-				j++
+				i++
 
 				if df.LinkOrder == psx.LastLink {
 					break
 				}
 
-				i++
-				df = smc.HeaderBlock.DirectoryFrame[i]
+				j = int(df.LinkOrder)
+				df = smc.HeaderBlock.DirectoryFrame[j]
 			}
 		}
 
@@ -85,7 +85,6 @@ func splitMemoryCard(base string, smc *psx.MemoryCard) error {
 			return errors.New("not a directory")
 		}
 
-		var i int
 		var target string
 		for i = 1; i <= 8; i++ {
 			target = filepath.Join(directory, fmt.Sprintf("%s-%d.mcd", code, i))
