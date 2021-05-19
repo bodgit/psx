@@ -51,8 +51,10 @@ func splitMemoryCard(base string, smc *psx.MemoryCard) error {
 			for {
 				// Copy the directory frame and data block
 				tmc.HeaderBlock.DirectoryFrame[j] = df
-				if df.LinkOrder != psx.LastLink {
+				if df.LinkOrder != psx.LastLink && tmc.HeaderBlock.DirectoryFrame[j].LinkOrder != uint16(j+1) {
+					// Block has moved during the copy
 					tmc.HeaderBlock.DirectoryFrame[j].LinkOrder = uint16(j + 1)
+					tmc.HeaderBlock.DirectoryFrame[j].UpdateChecksum()
 				}
 				tmc.DataBlock[j] = smc.DataBlock[i]
 

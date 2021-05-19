@@ -70,6 +70,12 @@ type directoryFrame struct {
 	Checksum byte
 }
 
+func (d *directoryFrame) UpdateChecksum() {
+	h := XOR()
+	binary.Write(h, binary.LittleEndian, d.directoryFrameFields)
+	d.Checksum = h.Sum(nil)[0]
+}
+
 type unusedFrame struct {
 	AvailableBlocks byte
 	Reserved        [3]byte
