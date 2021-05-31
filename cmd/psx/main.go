@@ -3,12 +3,12 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/bodgit/psx"
+	"github.com/spf13/afero"
 	"github.com/urfave/cli/v2"
 )
 
@@ -19,6 +19,8 @@ var (
 	commit  = "none"
 	date    = "unknown"
 )
+
+var fs = afero.NewOsFs()
 
 func init() {
 	cli.VersionFlag = &cli.BoolFlag{
@@ -31,10 +33,10 @@ func init() {
 func saveMemoryCard(base, code string, mc *psx.MemoryCard) error {
 	directory := filepath.Join(base, code)
 dir:
-	fi, err := os.Stat(directory)
+	fi, err := fs.Stat(directory)
 	if err != nil {
 		if os.IsNotExist(err) {
-			if err := os.Mkdir(directory, os.ModePerm|os.ModeDir); err != nil {
+			if err := fs.Mkdir(directory, os.ModePerm|os.ModeDir); err != nil {
 				return err
 			}
 			goto dir
@@ -49,7 +51,7 @@ dir:
 	var target string
 	for i = 1; i <= maxChannels; i++ {
 		target = filepath.Join(directory, fmt.Sprintf("%s-%d.mcd", code, i))
-		fi, err = os.Stat(target)
+		fi, err = fs.Stat(target)
 		if err != nil {
 			if os.IsNotExist(err) {
 				break
@@ -67,7 +69,7 @@ dir:
 		return err
 	}
 
-	if err := ioutil.WriteFile(target, b, 0666); err != nil {
+	if err := afero.WriteFile(fs, target, b, 0666); err != nil {
 		return err
 	}
 
@@ -125,30 +127,26 @@ func splitMemoryCard(base string, smc *psx.MemoryCard) error {
 	return nil
 }
 
-func splitMemoryCards(c *cli.Context) error {
-	if c.NArg() < 2 {
-		cli.ShowCommandHelpAndExit(c, c.Command.Name, 1)
-	}
-
-	base, err := filepath.Abs(c.Args().First())
+func splitMemoryCards(dir string, files []string) error {
+	base, err := filepath.Abs(dir)
 	if err != nil {
 		return err
 	}
 
-	if fi, err := os.Stat(base); err != nil || !fi.IsDir() {
+	if fi, err := fs.Stat(base); err != nil || !fi.IsDir() {
 		if err != nil {
 			return err
 		}
 		return errors.New("not a directory")
 	}
 
-	for _, f := range c.Args().Tail() {
+	for _, f := range files {
 		source, err := filepath.Abs(f)
 		if err != nil {
 			return err
 		}
 
-		b, err := ioutil.ReadFile(source)
+		b, err := afero.ReadFile(fs, source)
 		if err != nil {
 			return err
 		}
@@ -189,7 +187,12 @@ func main() {
 					Usage:       "Split generic virtual memory cards into multiple per-game cards",
 					Description: "Split generic virtual memory cards into multiple per-game cards",
 					ArgsUsage:   "DIRECTORY FILE...",
-					Action:      splitMemoryCards,
+					Action: func(c *cli.Context) error {
+						if c.NArg() < 2 {
+							cli.ShowCommandHelpAndExit(c, c.Command.Name, 1)
+						}
+						return splitMemoryCards(c.Args().First(), c.Args().Tail())
+					},
 				},
 			},
 		},
