@@ -53,6 +53,26 @@ func TestSplitMemoryCards(t *testing.T) {
 				"b4e8eee61c6aa6a0e750f2f93f3662e9bcde48f7133d6c124a1c25674fa25ae4": []string{"SLUS-00859", "SLUS-00859-1.mcd"},
 			},
 		},
+		"issue9": {
+			input: []string{
+				filepath.Join("..", "..", "testdata", "9", "MemoryCard2-1.mcd"),
+			},
+			output: map[string][]string{
+				"373421c84c68f18ab5751ec41ef805db223e85f13d3bb6caee3eab55cdc2d2b7": []string{"SCUS-94163", "SCUS-94163-1.mcd"},
+				"363b5c49aace090f121af467a468582191defb32b79ba938358f4af93b609913": []string{"SCUS-94244", "SCUS-94244-1.mcd"},
+				"fe6bd1c6551f3053d3054ccd226e1274920b8a762d462019c69bd84fd380b5f9": []string{"SCUS-94426", "SCUS-94426-1.mcd"},
+				"e436758c040da5bcda3258c9b9d9c444fb58af613b31a65957ccf2b609b0c074": []string{"SCUS-94900", "SCUS-94900-1.mcd"},
+				"458f99a5560958bf8742e3a8f9c2b6ec40943038d2ce47b27fcd82594b2d0b17": []string{"SLUS-00032", "SLUS-00032-1.mcd"},
+				"a014ec20c65ff3a989217fc0659e4110202296c1f29c4192e7178d390d25ed79": []string{"SLUS-00398", "SLUS-00398-1.mcd"},
+				"4a60baed3b9628ea795c4e5349f3d559054791fe2d912048d4d77d6080dc2258": []string{"SLUS-00439", "SLUS-00439-1.mcd"},
+				"d30cd43e7eb22b22ff27108398a4deff68d8e1bcf26a161ca21836f65cd0792b": []string{"SLUS-00620", "SLUS-00620-1.mcd"},
+				"9340558615f5f01850b2783425a3b48399dd7ddb8802ac01d9d3d6173087b102": []string{"SLUS-00839", "SLUS-00839-1.mcd"},
+				"2f7476eb606dc2d359af8cb5d61f3f19ac067e1f4f3a5326734e645f6fcbf7c9": []string{"SLUS-00840", "SLUS-00840-1.mcd"},
+				"e26dbe44a416b86b91ef2dca4b0a2b23f41b182b95cd88b27f14409697187434": []string{"SLUS-00892", "SLUS-00892-1.mcd"},
+				"b3280891276617f68ae41fda349fd7b76aff843f76e06e38967af65c5b790161": []string{"SLUS-01251", "SLUS-01251-1.mcd"},
+				"f8f4fbbb4afda799257e8e05d6a3304dc5a03ef5d733bc4e9e2c2c8726821c9e": []string{"SLUS-01541", "SLUS-01541-1.mcd"},
+			},
+		},
 	}
 
 	for name, table := range tables {

@@ -76,13 +76,23 @@ dir:
 	return nil
 }
 
+func sanitizeProductCode(code []byte) []byte {
+	clone := make([]byte, len(code))
+	copy(clone, code)
+	if len(clone) == 10 {
+		clone[4] = '-'
+	}
+	return clone
+}
+
 func splitMemoryCard(base string, smc *psx.MemoryCard) error {
 	// Create list of unique product codes
 	codes := make(map[string]struct{})
 	for i := 0; i < psx.NumBlocks; i++ {
 		df := smc.HeaderBlock.DirectoryFrame[i]
+		sanitized := string(sanitizeProductCode(df.ProductCode[:]))
 		if df.AvailableBlocks == psx.BlockFirstLink {
-			codes[string(df.ProductCode[:])] = struct{}{}
+			codes[sanitized] = struct{}{}
 		}
 	}
 
@@ -95,7 +105,8 @@ func splitMemoryCard(base string, smc *psx.MemoryCard) error {
 
 		for j := 0; j < psx.NumBlocks; j++ {
 			df := smc.HeaderBlock.DirectoryFrame[j]
-			if df.AvailableBlocks != psx.BlockFirstLink || string(df.ProductCode[:]) != code {
+			sanitized := string(sanitizeProductCode(df.ProductCode[:]))
+			if df.AvailableBlocks != psx.BlockFirstLink || sanitized != code {
 				continue
 			}
 			for {
