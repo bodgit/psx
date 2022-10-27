@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/spf13/afero v1.9.2
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	github.com/urfave/cli/v2 v2.20.3
 )
 
