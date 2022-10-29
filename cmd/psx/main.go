@@ -51,7 +51,7 @@ dir:
 	var target string
 	for i = 1; i <= maxChannels; i++ {
 		target = filepath.Join(directory, fmt.Sprintf("%s-%d.mcd", code, i))
-		fi, err = fs.Stat(target)
+		_, err = fs.Stat(target)
 		if err != nil {
 			if os.IsNotExist(err) {
 				break

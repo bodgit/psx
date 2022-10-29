@@ -51,6 +51,7 @@ type headerFrame struct {
 	Checksum byte
 }
 
+//nolint:unused
 func (h headerFrame) isValid() bool {
 	return bytes.Equal(h.Signature[:], headerSignature[:])
 }
@@ -73,7 +74,7 @@ type directoryFrame struct {
 
 func (d *directoryFrame) UpdateChecksum() {
 	h := XOR()
-	binary.Write(h, binary.LittleEndian, d.directoryFrameFields)
+	_ = binary.Write(h, binary.LittleEndian, d.directoryFrameFields)
 	d.Checksum = h.Sum(nil)[0]
 }
 
@@ -98,6 +99,7 @@ type dataBlock struct {
 	SaveData  [8190]byte
 }
 
+//nolint:unused
 func (d dataBlock) isValid() bool {
 	return bytes.Equal(d.Signature[:], dataSignature[:])
 }
@@ -108,6 +110,7 @@ type MemoryCard struct {
 	DataBlock   [NumBlocks]dataBlock
 }
 
+//nolint:unused
 func (m MemoryCard) isValid() bool {
 	if !m.HeaderBlock.HeaderFrame.isValid() {
 		return false
@@ -133,14 +136,14 @@ func (m *MemoryCard) UnmarshalBinary(b []byte) error {
 
 	h := XOR()
 
-	binary.Write(h, binary.LittleEndian, m.HeaderBlock.HeaderFrame.headerFrameFields)
+	_ = binary.Write(h, binary.LittleEndian, m.HeaderBlock.HeaderFrame.headerFrameFields)
 	if h.Sum(nil)[0] != m.HeaderBlock.HeaderFrame.Checksum {
 		return errBadHeaderChecksum
 	}
 
 	for i := 0; i < NumBlocks; i++ {
 		h.Reset()
-		binary.Write(h, binary.LittleEndian, m.HeaderBlock.DirectoryFrame[i].directoryFrameFields)
+		_ = binary.Write(h, binary.LittleEndian, m.HeaderBlock.DirectoryFrame[i].directoryFrameFields)
 		if h.Sum(nil)[0] != m.HeaderBlock.DirectoryFrame[i].Checksum {
 			return errBadDirectoryChecksum
 		}
