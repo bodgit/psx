@@ -1,7 +1,7 @@
 package psx
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewMemoryCard(t *testing.T) {
-	blank, err := ioutil.ReadFile(filepath.Join("testdata", "blank.mcd"))
+	blank, err := os.ReadFile(filepath.Join("testdata", "blank.mcd"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestNewMemoryCard(t *testing.T) {
 }
 
 func TestUnmarshalBinary(t *testing.T) {
-	b, err := ioutil.ReadFile(filepath.Join("testdata", "blank.mcd"))
+	b, err := os.ReadFile(filepath.Join("testdata", "blank.mcd"))
 	if err != nil {
 		t.Fatal(err)
 	}
