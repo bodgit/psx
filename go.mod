@@ -3,7 +3,7 @@ module github.com/bodgit/psx
 go 1.17
 
 require (
-	github.com/spf13/afero v1.9.2
+	github.com/spf13/afero v1.9.3
 	github.com/stretchr/testify v1.8.1
 	github.com/urfave/cli/v2 v2.23.5
 )
