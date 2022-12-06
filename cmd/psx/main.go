@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
+	iofs "io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -22,6 +24,11 @@ var (
 
 var fs = afero.NewOsFs()
 
+var (
+	errNoFreeChannels = errors.New("no free memory card channels")
+	errNotDirectory   = errors.New("not a directory")
+)
+
 func init() {
 	cli.VersionFlag = &cli.BoolFlag{
 		Name:    "version",
@@ -30,108 +37,118 @@ func init() {
 	}
 }
 
-func saveMemoryCard(base, code string, mc *psx.MemoryCard) error {
+func newMemoryCardFile(base, code string) (afero.File, error) {
 	directory := filepath.Join(base, code)
 dir:
 	fi, err := fs.Stat(directory)
+
 	if err != nil {
 		if os.IsNotExist(err) {
 			if err := fs.Mkdir(directory, os.ModePerm|os.ModeDir); err != nil {
-				return err
+				return nil, fmt.Errorf("unable to create directory: %w", err)
 			}
+
 			goto dir
 		}
-		return err
-	}
-	if !fi.IsDir() {
-		return errors.New("not a directory")
+
+		return nil, fmt.Errorf("unable to stat directory: %w", err)
 	}
 
-	var i int
-	var target string
+	if !fi.IsDir() {
+		return nil, errNotDirectory
+	}
+
+	var (
+		i      int
+		target string
+	)
+
 	for i = 1; i <= maxChannels; i++ {
 		target = filepath.Join(directory, fmt.Sprintf("%s-%d.mcd", code, i))
-		_, err = fs.Stat(target)
-		if err != nil {
+		if _, err = fs.Stat(target); err != nil {
 			if os.IsNotExist(err) {
 				break
 			}
-			return err
+
+			return nil, fmt.Errorf("unable to stat directory: %w", err)
 		}
 	}
 
 	if i > maxChannels {
-		return errors.New("no free memory card channels")
+		return nil, errNoFreeChannels
 	}
 
-	b, err := mc.MarshalBinary()
+	file, err := fs.Create(target)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("unable to create file: %w", err)
 	}
 
-	if err := afero.WriteFile(fs, target, b, 0666); err != nil {
-		return err
-	}
-
-	return nil
+	return file, nil
 }
 
-func sanitizeProductCode(code []byte) []byte {
-	clone := make([]byte, len(code))
-	copy(clone, code)
-	if len(clone) == 10 {
-		clone[4] = '-'
+func sanitizeProductCode(code string) string {
+	if code[4] == 'P' {
+		return code[:4] + "-" + code[5:]
 	}
-	return clone
+
+	return code
 }
 
-func splitMemoryCard(base string, smc *psx.MemoryCard) error {
+type opener interface {
+	Open() (iofs.File, error)
+}
+
+type writer interface {
+	Create() (io.WriteCloser, error)
+}
+
+func copyData(f opener, w writer) error {
+	rc, err := f.Open()
+	if err != nil {
+		return err //nolint:wrapcheck
+	}
+	defer rc.Close()
+
+	wc, err := w.Create()
+	if err != nil {
+		return err //nolint:wrapcheck
+	}
+
+	if _, err := io.Copy(wc, rc); err != nil {
+		return fmt.Errorf("unable to copy: %w", err)
+	}
+
+	return wc.Close() //nolint:wrapcheck
+}
+
+func splitMemoryCard(base string, r *psx.Reader) error {
 	// Create list of unique product codes
 	codes := make(map[string]struct{})
-	for i := 0; i < psx.NumBlocks; i++ {
-		df := smc.HeaderBlock.DirectoryFrame[i]
-		sanitized := string(sanitizeProductCode(df.ProductCode[:]))
-		if df.AvailableBlocks == psx.BlockFirstLink {
-			codes[sanitized] = struct{}{}
-		}
+	for _, file := range r.File {
+		codes[sanitizeProductCode(file.ProductCode)] = struct{}{}
 	}
 
 	for code := range codes {
-		tmc, err := psx.NewMemoryCard()
+		f, err := newMemoryCardFile(base, code)
 		if err != nil {
 			return err
 		}
-		i := 0
+		defer f.Close()
 
-		for j := 0; j < psx.NumBlocks; j++ {
-			df := smc.HeaderBlock.DirectoryFrame[j]
-			sanitized := string(sanitizeProductCode(df.ProductCode[:]))
-			if df.AvailableBlocks != psx.BlockFirstLink || sanitized != code {
+		w, err := psx.NewWriter(f)
+		if err != nil {
+			return err //nolint:wrapcheck
+		}
+		defer w.Close()
+
+		for _, file := range r.File {
+			if sanitizeProductCode(file.ProductCode) != code {
 				continue
 			}
-			for {
-				// Copy the directory frame and data block
-				tmc.HeaderBlock.DirectoryFrame[i] = df
-				if df.LinkOrder != psx.LastLink && tmc.HeaderBlock.DirectoryFrame[i].LinkOrder != uint16(i+1) {
-					// Block has moved during the copy
-					tmc.HeaderBlock.DirectoryFrame[i].LinkOrder = uint16(i + 1)
-					tmc.HeaderBlock.DirectoryFrame[i].UpdateChecksum()
-				}
-				tmc.DataBlock[i] = smc.DataBlock[j]
 
-				i++
-
-				if df.LinkOrder == psx.LastLink {
-					break
-				}
-
-				j = int(df.LinkOrder)
-				df = smc.HeaderBlock.DirectoryFrame[j]
+			if err := copyData(file, w); err != nil {
+				return err
 			}
-		}
-
-		if err := saveMemoryCard(base, code, tmc); err != nil {
-			return err
 		}
 	}
 
@@ -141,37 +158,35 @@ func splitMemoryCard(base string, smc *psx.MemoryCard) error {
 func splitMemoryCards(dir string, files []string) error {
 	base, err := filepath.Abs(dir)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to create absolute path: %w", err)
 	}
 
 	if fi, err := fs.Stat(base); err != nil || !fi.IsDir() {
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to stat directory: %w", err)
 		}
-		return errors.New("not a directory")
+
+		return errNotDirectory
 	}
 
 	for _, f := range files {
 		source, err := filepath.Abs(f)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to create absolute path: %w", err)
 		}
 
-		b, err := afero.ReadFile(fs, source)
+		file, err := fs.Open(source)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to open: %w", err)
 		}
+		defer file.Close()
 
-		mc, err := psx.NewMemoryCard()
+		r, err := psx.NewReader(file)
 		if err != nil {
-			return err
+			return err //nolint:wrapcheck
 		}
 
-		if err := mc.UnmarshalBinary(b); err != nil {
-			return err
-		}
-
-		if err := splitMemoryCard(base, mc); err != nil {
+		if err := splitMemoryCard(base, r); err != nil {
 			return err
 		}
 	}
@@ -199,9 +214,10 @@ func main() {
 					Description: "Split generic virtual memory cards into multiple per-game cards",
 					ArgsUsage:   "DIRECTORY FILE...",
 					Action: func(c *cli.Context) error {
-						if c.NArg() < 2 {
+						if c.NArg() < 2 { //nolint:gomnd
 							cli.ShowCommandHelpAndExit(c, c.Command.Name, 1)
 						}
+
 						return splitMemoryCards(c.Args().First(), c.Args().Tail())
 					},
 				},
