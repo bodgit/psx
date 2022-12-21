@@ -157,3 +157,22 @@ func newMemoryCard() (*memoryCard, error) {
 
 	return mc, nil
 }
+
+// DetectMemoryCard works out if the io.ReaderAt r pointing to the data of size
+// bytes looks sufficiently like a PlayStation 1 memory card image.
+func DetectMemoryCard(r io.ReaderAt, size int64) (bool, error) {
+	if size == cardSize {
+		sr := io.NewSectionReader(r, 0, int64(len(headerSignature)))
+
+		b, err := io.ReadAll(sr)
+		if err != nil {
+			return false, fmt.Errorf("unable to read header signature: %w", err)
+		}
+
+		if bytes.Equal(b, headerSignature[:]) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
