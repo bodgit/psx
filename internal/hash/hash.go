@@ -3,8 +3,10 @@ package hash
 import "hash"
 
 const (
+	// BlockSize is the preferred block size.
 	BlockSize = 1
-	Size      = 1
+	// Size is the size of the checksum in bytes.
+	Size = 1
 )
 
 type digest struct {
