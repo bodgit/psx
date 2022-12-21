@@ -1,0 +1,10 @@
+---
+linters:
+  enable-all: true
+  disable:
+    - exhaustivestruct
+    - exhaustruct
+    - gochecknoglobals
+    - gochecknoinits
+    - ireturn
+    - varnamelen

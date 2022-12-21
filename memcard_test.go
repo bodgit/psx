@@ -1,44 +1,47 @@
-package psx
+package psx_test
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/bodgit/psx"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewMemoryCard(t *testing.T) {
-	blank, err := os.ReadFile(filepath.Join("testdata", "blank.mcd"))
-	if err != nil {
-		t.Fatal(err)
+func TestDetectMemoryCard(t *testing.T) {
+	t.Parallel()
+
+	tables := []struct {
+		file string
+	}{
+		{
+			filepath.Join("testdata", "blank.mcd"),
+		},
 	}
 
-	mc, err := NewMemoryCard()
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, table := range tables {
+		table := table
+		t.Run(table.file, func(t *testing.T) {
+			t.Parallel()
 
-	b, err := mc.MarshalBinary()
-	if err != nil {
-		t.Fatal(err)
-	}
+			f, err := os.Open(table.file)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer f.Close()
 
-	assert.Equal(t, blank, b)
-}
+			fi, err := f.Stat()
+			if err != nil {
+				t.Fatal(err)
+			}
 
-func TestUnmarshalBinary(t *testing.T) {
-	b, err := os.ReadFile(filepath.Join("testdata", "blank.mcd"))
-	if err != nil {
-		t.Fatal(err)
-	}
+			ok, err := psx.DetectMemoryCard(f, fi.Size())
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	mc, err := NewMemoryCard()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := mc.UnmarshalBinary(b); err != nil {
-		t.Fatal(err)
+			assert.Equal(t, true, ok)
+		})
 	}
 }
