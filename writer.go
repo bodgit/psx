@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	errDuplicateName = errors.New("duplicate name")
 	errInvalidLength = errors.New("invalid length")
 	errNoFreeSpace   = errors.New("no free space")
 )
@@ -44,6 +45,16 @@ func (w *fileWriter) Close() error {
 	df := new(directoryFrame)
 	if err := binary.Read(w.buf, binary.LittleEndian, df); err != nil {
 		return fmt.Errorf("unable to read header: %w", err)
+	}
+
+	for _, x := range mc.HeaderBlock.DirectoryFrame {
+		if !x.isFirst() {
+			continue
+		}
+
+		if x.filename() == df.filename() {
+			return errDuplicateName
+		}
 	}
 
 	if w.buf.Len()%blockSize != 0 || w.buf.Len() != int(df.Size) {

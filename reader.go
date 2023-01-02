@@ -164,7 +164,7 @@ func (r *Reader) init(nr io.Reader) error {
 		}
 
 		f := &File{r: r, i: i}
-		f.Name = df.countryCode() + df.productCode() + df.identifier()
+		f.Name = df.filename()
 		f.Size = int64(binary.Size(df) + int(df.Size))
 		f.CountryCode = df.countryCode()
 		f.ProductCode = df.productCode()

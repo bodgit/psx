@@ -87,6 +87,10 @@ func (df *directoryFrame) identifier() string {
 	return string(df.Identifier[:])
 }
 
+func (df *directoryFrame) filename() string {
+	return df.countryCode() + df.productCode() + df.identifier()
+}
+
 func newDirectoryFrame() directoryFrame {
 	return directoryFrame{
 		AvailableBlocks: blockAvailable,
