@@ -3,6 +3,7 @@ package psx_test
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWriter(t *testing.T) {
+func TestNewWriter(t *testing.T) {
 	t.Parallel()
 
 	buf := new(bytes.Buffer)
@@ -31,6 +32,39 @@ func TestWriter(t *testing.T) {
 	}
 
 	assert.Equal(t, b, buf.Bytes())
+}
+
+func TestCopy(t *testing.T) {
+	t.Parallel()
+
+	rc, err := psx.OpenReader(filepath.Join("testdata", "MemoryCard2-1.mcd"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rc.Close()
+
+	wc, err := psx.NewWriter(io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer wc.Close()
+
+	fr, err := rc.File[0].Open()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer fr.Close()
+
+	fw, err := wc.Create()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := io.Copy(fw, fr); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Nil(t, fw.Close())
 }
 
 func ExampleWriter() {
