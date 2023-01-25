@@ -33,7 +33,7 @@ func (w *fileWriter) Write(p []byte) (int, error) {
 	return w.buf.Write(p) //nolint:wrapcheck
 }
 
-//nolint:cyclop
+//nolint:cyclop,funlen
 func (w *fileWriter) Close() error {
 	w.w.mu.Lock()
 	defer w.w.mu.Unlock()
