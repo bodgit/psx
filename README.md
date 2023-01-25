@@ -9,18 +9,4 @@
 psx
 ===
 
-A collection of libraries and utilities for dealing with Sony PlayStation 1 file formats.
-
-Full installation:
-```
-go get github.com/bodgit/psx/...
-```
-Or grab a pre-built binary from the [releases page](https://github.com/bodgit/psx/releases).
-
-## psx
-
-The `psx` utility currently allows you to split generic memory cards (such as those created by the [8BitMods MemCard PRO](https://8bitmods.com/memcard-pro-for-playstation-1-smoke-black/)) into per-game memory cards for use with a supported ODE.
-
-A quick demo:
-
-<img src="./psx.svg">
+A library for reading and writing Sony PlayStation 1 memory card images.
