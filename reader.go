@@ -227,7 +227,7 @@ func split(name string) (string, string) {
 	return name[:i], name[i+1:]
 }
 
-var dotFile = &fileListEntry{name: "./", isDir: true}
+var dotFile = &fileListEntry{name: "./", isDir: true} //nolint:gochecknoglobals
 
 func (r *Reader) openLookup(name string) *fileListEntry {
 	if name == "." {

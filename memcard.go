@@ -30,7 +30,7 @@ const (
 )
 
 var (
-	dataSignature = [2]byte{'S', 'C'} //nolint:deadcode,varcheck
+	dataSignature = [2]byte{'S', 'C'} //nolint:deadcode,gochecknoglobals,unused,varcheck
 
 	errBadDataSignature = errors.New("bad data block signature") //nolint:deadcode,unused,varcheck
 	errTrailingBytes    = errors.New("trailing bytes")
@@ -77,11 +77,7 @@ func (mc *memoryCard) checksum() error {
 		}
 	}
 
-	if err := mc.HeaderBlock.TrailingFrame.checksum(); err != nil {
-		return err
-	}
-
-	return nil
+	return mc.HeaderBlock.TrailingFrame.checksum()
 }
 
 func (mc *memoryCard) isValid() error {

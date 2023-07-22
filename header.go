@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	headerSignature = [2]byte{'M', 'C'}
+	headerSignature = [2]byte{'M', 'C'} //nolint:gochecknoglobals
 
 	errBadHeaderChecksum  = errors.New("bad header frame checksum")
 	errBadHeaderSignature = errors.New("bad header frame signature")
