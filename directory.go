@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"io"
+
+	"github.com/bodgit/psx/internal/xor"
 )
 
 var errBadDirectoryChecksum = errors.New("bad directory frame checksum")
@@ -18,6 +21,20 @@ type directoryFrame struct {
 	Identifier      [8]byte
 	_               [97]byte
 	Checksum        [1]byte
+}
+
+func (df *directoryFrame) unmarshalBinary(r io.Reader) error {
+	h := xor.New()
+
+	if err := binary.Read(checksumReader(r, h, binary.Size(df)), binary.LittleEndian, df); err != nil {
+		return err
+	}
+
+	if !bytes.Equal(df.Checksum[:], h.Sum(nil)) {
+		return errBadDirectoryChecksum
+	}
+
+	return nil
 }
 
 func (df *directoryFrame) MarshalBinary() ([]byte, error) {
@@ -45,23 +62,6 @@ func (df *directoryFrame) checksum() error {
 	}
 
 	copy(df.Checksum[:], xor)
-
-	return nil
-}
-
-func (df *directoryFrame) isValid() error {
-	if !df.isFirst() {
-		return nil
-	}
-
-	xor, err := df.generateChecksum()
-	if err != nil {
-		return err
-	}
-
-	if !bytes.Equal(df.Checksum[:], xor) {
-		return errBadDirectoryChecksum
-	}
 
 	return nil
 }

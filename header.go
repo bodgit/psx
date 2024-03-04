@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"io"
+
+	"github.com/bodgit/psx/internal/xor"
 )
 
 var (
@@ -17,6 +20,24 @@ type headerFrame struct {
 	Signature [2]byte
 	_         [125]byte
 	Checksum  [1]byte
+}
+
+func (hf *headerFrame) unmarshalBinary(r io.Reader) error {
+	h := xor.New()
+
+	if err := binary.Read(checksumReader(r, h, binary.Size(hf)), binary.LittleEndian, hf); err != nil {
+		return err
+	}
+
+	if !bytes.Equal(hf.Signature[:], headerSignature[:]) {
+		return errBadHeaderSignature
+	}
+
+	if !bytes.Equal(hf.Checksum[:], h.Sum(nil)) {
+		return errBadHeaderChecksum
+	}
+
+	return nil
 }
 
 func (hf *headerFrame) MarshalBinary() ([]byte, error) {
@@ -44,23 +65,6 @@ func (hf *headerFrame) checksum() error {
 	}
 
 	copy(hf.Checksum[:], xor)
-
-	return nil
-}
-
-func (hf *headerFrame) isValid() error {
-	if !bytes.Equal(hf.Signature[:], headerSignature[:]) {
-		return errBadHeaderSignature
-	}
-
-	xor, err := hf.generateChecksum()
-	if err != nil {
-		return err
-	}
-
-	if !bytes.Equal(hf.Checksum[:], xor) {
-		return errBadHeaderChecksum
-	}
 
 	return nil
 }

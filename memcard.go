@@ -44,6 +44,30 @@ type headerBlock struct {
 	TrailingFrame  headerFrame
 }
 
+func (hb *headerBlock) unmarshalBinary(r io.Reader) error {
+	if err := hb.HeaderFrame.unmarshalBinary(r); err != nil {
+		return err
+	}
+
+	for i := 0; i < numBlocks; i++ {
+		if err := hb.DirectoryFrame[i].unmarshalBinary(r); err != nil {
+			return err
+		}
+	}
+
+	for i := 0; i < numUnusedFrames; i++ {
+		if err := binary.Read(r, binary.LittleEndian, &hb.UnusedFrame[i]); err != nil {
+			return err
+		}
+	}
+
+	if _, err := io.CopyN(io.Discard, r, 27*frameSize); err != nil {
+		return err
+	}
+
+	return hb.TrailingFrame.unmarshalBinary(r)
+}
+
 type memoryCard struct {
 	HeaderBlock headerBlock
 	DataBlock   [numBlocks][blockSize]byte
@@ -60,6 +84,7 @@ func (mc *memoryCard) count() int {
 		if !mc.HeaderBlock.DirectoryFrame[i].isFirst() {
 			continue
 		}
+
 		count++
 	}
 
@@ -80,42 +105,20 @@ func (mc *memoryCard) checksum() error {
 	return mc.HeaderBlock.TrailingFrame.checksum()
 }
 
-func (mc *memoryCard) isValid() error {
-	if err := mc.HeaderBlock.HeaderFrame.isValid(); err != nil {
-		return err
+func (mc *memoryCard) unmarshalBinary(r io.Reader) error {
+	if err := mc.HeaderBlock.unmarshalBinary(r); err != nil {
+		return fmt.Errorf("unable to unmarshal header block: %w", err)
 	}
 
-	for i := 0; i < numBlocks; i++ {
-		df := mc.HeaderBlock.DirectoryFrame[i]
-
-		if err := df.isValid(); err != nil {
-			return err
-		}
-
-		if !df.isFirst() {
-			continue
-		}
-
-		/*
-			if !bytes.Equal(mc.DataBlock[i][0:2], dataSignature[:]) {
-				return errBadDataSignature
-			}
-		*/
-	} //nolint:wsl
-
-	return nil
-}
-
-func (mc *memoryCard) unmarshalBinary(r io.Reader) error {
-	if err := binary.Read(r, binary.LittleEndian, mc); err != nil {
-		return fmt.Errorf("unable to unmarshal memory card: %w", err)
+	if err := binary.Read(r, binary.LittleEndian, &mc.DataBlock); err != nil {
+		return fmt.Errorf("unable to unmarshal data blocks: %w", err)
 	}
 
 	if n, _ := io.CopyN(io.Discard, r, 1); n > 0 {
 		return errTrailingBytes
 	}
 
-	return mc.isValid()
+	return nil
 }
 
 func (mc *memoryCard) UnmarshalBinary(b []byte) error {
