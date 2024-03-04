@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/bodgit/psx/internal/hash"
+	"github.com/bodgit/psx/internal/xor"
 )
 
 func checksum(b []byte) []byte {
-	h := hash.New()
+	h := xor.New()
 
 	_, _ = io.Copy(h, bytes.NewReader(b))
 
