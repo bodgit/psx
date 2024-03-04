@@ -21,3 +21,13 @@ func TestFS(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestIssue83(t *testing.T) {
+	t.Parallel()
+
+	rc, err := psx.OpenReader(filepath.Join("testdata", "m1.mcd"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rc.Close()
+}

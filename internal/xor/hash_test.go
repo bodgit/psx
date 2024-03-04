@@ -1,17 +1,17 @@
-package hash_test
+package xor_test
 
 import (
 	"bytes"
 	"testing"
 
-	"github.com/bodgit/psx/internal/hash"
+	"github.com/bodgit/psx/internal/xor"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestHash(t *testing.T) {
 	t.Parallel()
 
-	h := hash.New()
+	h := xor.New()
 
 	assert.Equal(t, 1, h.Size())
 	assert.Equal(t, 1, h.BlockSize())
